@@ -19,17 +19,22 @@
 
 package quickfix;
 
-import static org.hamcrest.Matchers.*;
-import static org.junit.Assert.*;
+import org.junit.Before;
+import org.junit.Test;
+import quickfix.field.ApplVerID;
+import quickfix.test.acceptance.ATApplication;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.junit.Before;
-import org.junit.Test;
-
-import quickfix.field.ApplVerID;
-import quickfix.test.acceptance.ATApplication;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class DefaultSessionFactoryTest {
 
@@ -130,11 +135,11 @@ public class DefaultSessionFactoryTest {
         createSessionAndAssertDictionaryNotFound();
     }
 
-    private void createSessionAndAssertDictionaryNotFound() throws ConfigError {
+    private void createSessionAndAssertDictionaryNotFound() {
         try {
             factory.create(sessionID, settings);
             fail("no data dictionary exception");
-        } catch (DataDictionary.Exception e) {
+        } catch (ConfigError e) {
             assertTrue("exception message not matched, expected: " + "... Could not find data ..."
                     + ", got: " + e.getMessage(),
                     e.getMessage().contains("Could not find data"));

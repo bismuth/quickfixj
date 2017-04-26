@@ -24,7 +24,7 @@
  <xsl:param name="fieldPackage"/>
  <xsl:param name="decimalType">double</xsl:param>
  <xsl:param name="decimalConverter">Double</xsl:param>
- <xsl:param name="serialVersionUID"/> 
+ <xsl:param name="serialVersionUID"/>
 
  <xsl:template match="text()"/>
 
@@ -36,21 +36,21 @@
 
 <xsl:template match="fix">/* Generated Java Source File */
 /*******************************************************************************
- * Copyright (c) quickfixengine.org  All rights reserved. 
- * 
- * This file is part of the QuickFIX FIX Engine 
- * 
- * This file may be distributed under the terms of the quickfixengine.org 
- * license as defined by quickfixengine.org and appearing in the file 
- * LICENSE included in the packaging of this file. 
- * 
- * This file is provided AS IS with NO WARRANTY OF ANY KIND, INCLUDING 
- * THE WARRANTY OF DESIGN, MERCHANTABILITY AND FITNESS FOR A 
- * PARTICULAR PURPOSE. 
- * 
- * See http://www.quickfixengine.org/LICENSE for licensing information. 
- * 
- * Contact ask@quickfixengine.org if any conditions of this licensing 
+ * Copyright (c) quickfixengine.org  All rights reserved.
+ *
+ * This file is part of the QuickFIX FIX Engine
+ *
+ * This file may be distributed under the terms of the quickfixengine.org
+ * license as defined by quickfixengine.org and appearing in the file
+ * LICENSE included in the packaging of this file.
+ *
+ * This file is provided AS IS with NO WARRANTY OF ANY KIND, INCLUDING
+ * THE WARRANTY OF DESIGN, MERCHANTABILITY AND FITNESS FOR A
+ * PARTICULAR PURPOSE.
+ *
+ * See http://www.quickfixengine.org/LICENSE for licensing information.
+ *
+ * Contact ask@quickfixengine.org if any conditions of this licensing
  * are not clear to you.
  ******************************************************************************/
 <xsl:apply-templates/>
@@ -108,6 +108,7 @@ public class <xsl:value-of select="@name"/> extends <xsl:call-template name="get
      <xsl:when test="@type='LENGTH'">int</xsl:when>
      <xsl:when test="@type='COUNTRY'">String</xsl:when>
      <xsl:when test="@type='MULTIPLESTRINGVALUE'">String</xsl:when>
+     <xsl:when test="@type='MULTIPLEVALUESTRING'">String</xsl:when>
      <xsl:otherwise>String</xsl:otherwise>
    </xsl:choose>
 </xsl:template>
@@ -134,6 +135,7 @@ public class <xsl:value-of select="@name"/> extends <xsl:call-template name="get
      <xsl:when test="@type='LENGTH'">Int</xsl:when>
      <xsl:when test="@type='COUNTRY'">String</xsl:when>
      <xsl:when test="@type='MULTIPLESTRINGVALUE'">String</xsl:when>
+     <xsl:when test="@type='MULTIPLEVALUESTRING'">String</xsl:when>
      <xsl:otherwise>String</xsl:otherwise>
    </xsl:choose>
 </xsl:template>
@@ -152,7 +154,9 @@ public class <xsl:value-of select="@name"/> extends <xsl:call-template name="get
 	</xsl:when>
 	<xsl:when test="../@type='MULTIPLESTRINGVALUE'">public static final String <xsl:value-of select="@description"/> = "<xsl:value-of select="@enum"/>";
 	</xsl:when>
-	<xsl:when test="../@type='BOOLEAN'">public static final boolean <xsl:value-of select="@description"/> = <xsl:call-template name="y-or-n-to-bool" />;
+	<xsl:when test="../@type='MULTIPLEVALUESTRING'">public static final String <xsl:value-of select="@description"/> = "<xsl:value-of select="@enum"/>";
+	</xsl:when>
+        <xsl:when test="../@type='BOOLEAN'">public static final boolean <xsl:value-of select="@description"/> = <xsl:call-template name="y-or-n-to-bool" />;
 	</xsl:when>
 	<xsl:when test="../@type='INT'">public static final int <xsl:value-of select="@description"/> = <xsl:value-of select="@enum"/>;
 	</xsl:when>
@@ -168,7 +172,7 @@ public class <xsl:value-of select="@name"/> extends <xsl:call-template name="get
 </xsl:for-each>
 
 <xsl:if test="@name='SecurityType'">
-<xsl:if test="not(/fix/fields/field[@name='SecurityType']/value[@description='OPTION'])"> 
+<xsl:if test="not(/fix/fields/field[@name='SecurityType']/value[@description='OPTION'])">
 	public static final String OPTION = "OPT";</xsl:if>
 <xsl:if test="not(/fix/fields/field[@name='SecurityType']/value[@description='FUTURE'])">
 	public static final String FUTURE = "FUT";</xsl:if>

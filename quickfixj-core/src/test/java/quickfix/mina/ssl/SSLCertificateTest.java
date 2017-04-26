@@ -19,24 +19,12 @@
 
 package quickfix.mina.ssl;
 
-import java.lang.reflect.Field;
-import java.math.BigInteger;
-import java.util.HashMap;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-
-import javax.net.ssl.SSLPeerUnverifiedException;
-import javax.net.ssl.SSLSession;
-import javax.security.cert.X509Certificate;
-
 import org.apache.mina.core.filterchain.IoFilterAdapter;
 import org.apache.mina.core.filterchain.IoFilterChain;
-import org.apache.mina.core.filterchain.IoFilterChainBuilder;
 import org.apache.mina.core.session.IoSession;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import quickfix.ApplicationAdapter;
 import quickfix.ConfigError;
 import quickfix.DefaultMessageFactory;
@@ -54,18 +42,32 @@ import quickfix.mina.IoSessionResponder;
 import quickfix.mina.ProtocolFactory;
 import quickfix.mina.SessionConnector;
 
+import javax.net.ssl.SSLPeerUnverifiedException;
+import javax.net.ssl.SSLSession;
+import javax.security.cert.X509Certificate;
+import java.lang.reflect.Field;
+import java.math.BigInteger;
+import java.util.HashMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+
 public class SSLCertificateTest {
+
+    // Note: To diagnose cipher suite errors, run with -Djavax.net.debug=ssl:handshake
+    private static final String CIPHER_SUITES_ANON = "TLS_DH_anon_WITH_AES_128_CBC_SHA";
+    private static final String CIPHER_SUITES_TLS = "TLS_RSA_WITH_AES_128_CBC_SHA";
+
     @Test
     public void shouldAuthenticateServerCertificate() throws Exception {
         TestAcceptor acceptor = new TestAcceptor(createAcceptorSettings("single-session/server.keystore", false,
-                "single-session/empty.keystore", "TLS_RSA_WITH_AES_128_CBC_SHA", "TLSv1.2", "JKS", "JKS"));
+                "single-session/empty.keystore", CIPHER_SUITES_TLS, "TLSv1.2", "JKS", "JKS"));
 
         try {
             acceptor.start();
 
             TestInitiator initiator = new TestInitiator(
                     createInitiatorSettings("single-session/empty.keystore", "single-session/client.truststore",
-                            "TLS_RSA_WITH_AES_128_CBC_SHA", "TLSv1.2", "ZULU", "ALFA", "12340", "JKS", "JKS"));
+                            CIPHER_SUITES_TLS, "TLSv1.2", "ZULU", "ALFA", "12340", "JKS", "JKS"));
 
             try {
                 initiator.start();
@@ -89,14 +91,14 @@ public class SSLCertificateTest {
     @Test
     public void shouldAuthenticateServerAndClientCertificates() throws Exception {
         TestAcceptor acceptor = new TestAcceptor(createAcceptorSettings("single-session/server.keystore", true,
-                "single-session/server.truststore", "TLS_RSA_WITH_AES_128_CBC_SHA", "TLSv1.2", "JKS", "JKS"));
+                "single-session/server.truststore", CIPHER_SUITES_TLS, "TLSv1.2", "JKS", "JKS"));
 
         try {
             acceptor.start();
 
             TestInitiator initiator = new TestInitiator(
                     createInitiatorSettings("single-session/client.keystore", "single-session/client.truststore",
-                            "TLS_RSA_WITH_AES_128_CBC_SHA", "TLSv1.2", "ZULU", "ALFA", "12340", "JKS", "JKS"));
+                            CIPHER_SUITES_TLS, "TLSv1.2", "ZULU", "ALFA", "12340", "JKS", "JKS"));
 
             try {
                 initiator.start();
@@ -121,14 +123,14 @@ public class SSLCertificateTest {
     @Test
     public void shouldAuthenticateServerAndClientCertificatesWhenUsingDifferentKeystoreFormats() throws Exception {
         TestAcceptor acceptor = new TestAcceptor(createAcceptorSettings("single-session/server-pkcs12.keystore", true,
-                "single-session/server-jceks.truststore", "TLS_RSA_WITH_AES_128_CBC_SHA", "TLSv1.2", "PKCS12",
+                "single-session/server-jceks.truststore", CIPHER_SUITES_TLS, "TLSv1.2", "PKCS12",
                 "JCEKS"));
 
         try {
             acceptor.start();
 
             TestInitiator initiator = new TestInitiator(createInitiatorSettings("single-session/client-jceks.keystore",
-                    "single-session/client-jceks.keystore", "TLS_RSA_WITH_AES_128_CBC_SHA", "TLSv1.2", "ZULU", "ALFA",
+                    "single-session/client-jceks.keystore", CIPHER_SUITES_TLS, "TLSv1.2", "ZULU", "ALFA",
                     "12340", "JCEKS", "JCEKS"));
 
             try {
@@ -156,20 +158,20 @@ public class SSLCertificateTest {
         TestAcceptor acceptor = new TestAcceptor(createMultiSessionAcceptorSettings(
                 "multi-session/server.keystore", true, new String[] { "multi-session/server1.truststore",
                         "multi-session/server2.truststore", "multi-session/server3.truststore" },
-                "TLS_RSA_WITH_AES_128_CBC_SHA", "TLSv1.2"));
+                CIPHER_SUITES_TLS, "TLSv1.2"));
 
         try {
             acceptor.start();
 
             TestInitiator initiator1 = new TestInitiator(
                     createInitiatorSettings("multi-session/client1.keystore", "multi-session/client1.keystore",
-                            "TLS_RSA_WITH_AES_128_CBC_SHA", "TLSv1.2", "ZULU0", "ALFA0", "12340", "JKS", "JKS"));
+                            CIPHER_SUITES_TLS, "TLSv1.2", "ZULU0", "ALFA0", "12340", "JKS", "JKS"));
             TestInitiator initiator2 = new TestInitiator(
                     createInitiatorSettings("multi-session/client2.keystore", "multi-session/client2.keystore",
-                            "TLS_RSA_WITH_AES_128_CBC_SHA", "TLSv1.2", "ZULU1", "ALFA1", "12341", "JKS", "JKS"));
+                            CIPHER_SUITES_TLS, "TLSv1.2", "ZULU1", "ALFA1", "12341", "JKS", "JKS"));
             TestInitiator initiator3 = new TestInitiator(
                     createInitiatorSettings("multi-session/client3.keystore", "multi-session/client3.keystore",
-                            "TLS_RSA_WITH_AES_128_CBC_SHA", "TLSv1.2", "ZULU2", "ALFA2", "12342", "JKS", "JKS"));
+                            CIPHER_SUITES_TLS, "TLSv1.2", "ZULU2", "ALFA2", "12342", "JKS", "JKS"));
 
             try {
                 initiator1.start();
@@ -217,20 +219,20 @@ public class SSLCertificateTest {
         TestAcceptor acceptor = new TestAcceptor(createMultiSessionAcceptorSettings(
                 "multi-session/server.keystore", true, new String[] { "multi-session/server1.truststore",
                         "multi-session/server2.truststore", "multi-session/server3.truststore" },
-                "TLS_RSA_WITH_AES_128_CBC_SHA", "TLSv1.2"));
+                CIPHER_SUITES_TLS, "TLSv1.2"));
 
         try {
             acceptor.start();
 
             TestInitiator initiator1 = new TestInitiator(
                     createInitiatorSettings("multi-session/client2.keystore", "multi-session/client2.keystore",
-                            "TLS_RSA_WITH_AES_128_CBC_SHA", "TLSv1.2", "ZULU0", "ALFA0", "12340", "JKS", "JKS"));
+                            CIPHER_SUITES_TLS, "TLSv1.2", "ZULU0", "ALFA0", "12340", "JKS", "JKS"));
             TestInitiator initiator2 = new TestInitiator(
                     createInitiatorSettings("multi-session/client1.keystore", "multi-session/client1.keystore",
-                            "TLS_RSA_WITH_AES_128_CBC_SHA", "TLSv1.2", "ZULU1", "ALFA1", "12341", "JKS", "JKS"));
+                            CIPHER_SUITES_TLS, "TLSv1.2", "ZULU1", "ALFA1", "12341", "JKS", "JKS"));
             TestInitiator initiator3 = new TestInitiator(
                     createInitiatorSettings("multi-session/client3.keystore", "multi-session/client3.keystore",
-                            "TLS_RSA_WITH_AES_128_CBC_SHA", "TLSv1.2", "ZULU2", "ALFA2", "12342", "JKS", "JKS"));
+                            CIPHER_SUITES_TLS, "TLSv1.2", "ZULU2", "ALFA2", "12342", "JKS", "JKS"));
 
             try {
                 initiator1.start();
@@ -272,14 +274,14 @@ public class SSLCertificateTest {
     public void shouldCreateFixSessionWithoutAuthenticationWhenUsingEmptyServerKeyStoreWithAnonymousCipher()
             throws Exception {
         TestAcceptor acceptor = new TestAcceptor(createAcceptorSettings("single-session/empty.keystore", false,
-                "single-session/empty.keystore", "SSL_DH_anon_WITH_RC4_128_MD5", null, "JKS", "JKS"));
+                "single-session/empty.keystore", CIPHER_SUITES_ANON, null, "JKS", "JKS"));
 
         try {
             acceptor.start();
 
             TestInitiator initiator = new TestInitiator(
                     createInitiatorSettings("single-session/empty.keystore", "single-session/empty.keystore",
-                            "SSL_DH_anon_WITH_RC4_128_MD5", null, "ZULU", "ALFA", "12340", "JKS", "JKS"));
+                            CIPHER_SUITES_ANON, null, "ZULU", "ALFA", "12340", "JKS", "JKS"));
 
             try {
                 initiator.start();
@@ -302,13 +304,13 @@ public class SSLCertificateTest {
     @Test
     public void shouldCreateFixSessionWithoutAuthenticationWhenTrustStoresAreMissing() throws Exception {
         TestAcceptor acceptor = new TestAcceptor(createAcceptorSettings("single-session/server.keystore", false,
-                "missing", "SSL_DH_anon_WITH_RC4_128_MD5", null, "JKS", "JKS"));
+                "missing", CIPHER_SUITES_ANON, null, "JKS", "JKS"));
 
         try {
             acceptor.start();
 
             TestInitiator initiator = new TestInitiator(createInitiatorSettings("single-session/client.keystore",
-                    "missing", "SSL_DH_anon_WITH_RC4_128_MD5", null, "ZULU", "ALFA", "12340", "JKS", "JKS"));
+                    "missing", CIPHER_SUITES_ANON, null, "ZULU", "ALFA", "12340", "JKS", "JKS"));
 
             try {
                 initiator.start();
@@ -331,13 +333,13 @@ public class SSLCertificateTest {
     @Test
     public void shouldCreateFixSessionWithoutAuthenticationWhenUsingDefaultKeystores() throws Exception {
         TestAcceptor acceptor = new TestAcceptor(createAcceptorSettings("missing", false, "missing",
-                "SSL_DH_anon_WITH_RC4_128_MD5", null, "JKS", "JKS"));
+                CIPHER_SUITES_ANON, null, "JKS", "JKS"));
 
         try {
             acceptor.start();
 
             TestInitiator initiator = new TestInitiator(createInitiatorSettings("missing", "missing",
-                    "SSL_DH_anon_WITH_RC4_128_MD5", null, "ZULU", "ALFA", "12340", "JKS", "JKS"));
+                    CIPHER_SUITES_ANON, null, "ZULU", "ALFA", "12340", "JKS", "JKS"));
 
             try {
                 initiator.start();
@@ -389,14 +391,14 @@ public class SSLCertificateTest {
     @Test
     public void shouldFailWhenUsingEmptyClientTruststore() throws Exception {
         TestAcceptor acceptor = new TestAcceptor(createAcceptorSettings("single-session/server.keystore", false,
-                "single-session/empty.keystore", "TLS_RSA_WITH_AES_128_CBC_SHA", "TLSv1.2", "JKS", "JKS"));
+                "single-session/empty.keystore", CIPHER_SUITES_TLS, "TLSv1.2", "JKS", "JKS"));
 
         try {
             acceptor.start();
 
             TestInitiator initiator = new TestInitiator(
                     createInitiatorSettings("single-session/empty.keystore", "single-session/empty.keystore",
-                            "TLS_RSA_WITH_AES_128_CBC_SHA", "TLSv1.2", "ZULU", "ALFA", "12340", "JKS", "JKS"));
+                            CIPHER_SUITES_TLS, "TLSv1.2", "ZULU", "ALFA", "12340", "JKS", "JKS"));
 
             try {
                 initiator.start();
@@ -419,14 +421,14 @@ public class SSLCertificateTest {
     @Test
     public void shouldFailWhenUsingEmptyServerTrustore() throws Exception {
         TestAcceptor acceptor = new TestAcceptor(createAcceptorSettings("single-session/server.keystore", true,
-                "single-session/empty.keystore", "TLS_RSA_WITH_AES_128_CBC_SHA", "TLSv1.2", "JKS", "JKS"));
+                "single-session/empty.keystore", CIPHER_SUITES_TLS, "TLSv1.2", "JKS", "JKS"));
 
         try {
             acceptor.start();
 
             TestInitiator initiator = new TestInitiator(
                     createInitiatorSettings("single-session/client.keystore", "single-session/client.truststore",
-                            "TLS_RSA_WITH_AES_128_CBC_SHA", "TLSv1.2", "ZULU", "ALFA", "12340", "JKS", "JKS"));
+                            CIPHER_SUITES_TLS, "TLSv1.2", "ZULU", "ALFA", "12340", "JKS", "JKS"));
 
             try {
                 initiator.start();
@@ -449,14 +451,14 @@ public class SSLCertificateTest {
     @Test
     public void shouldFailWhenUsingBadClientCertificate() throws Exception {
         TestAcceptor acceptor = new TestAcceptor(createAcceptorSettings("single-session/server.keystore", true,
-                "single-session/server.truststore", "TLS_RSA_WITH_AES_128_CBC_SHA", "TLSv1.2", "JKS", "JKS"));
+                "single-session/server.truststore", CIPHER_SUITES_TLS, "TLSv1.2", "JKS", "JKS"));
 
         try {
             acceptor.start();
 
             TestInitiator initiator = new TestInitiator(
                     createInitiatorSettings("single-session/server.keystore", "single-session/client.truststore",
-                            "TLS_RSA_WITH_AES_128_CBC_SHA", "TLSv1.2", "ZULU", "ALFA", "12340", "JKS", "JKS"));
+                            CIPHER_SUITES_TLS, "TLSv1.2", "ZULU", "ALFA", "12340", "JKS", "JKS"));
 
             try {
                 initiator.start();
@@ -479,14 +481,14 @@ public class SSLCertificateTest {
     @Test
     public void shouldFailWhenUsingBadServerCertificate() throws Exception {
         TestAcceptor acceptor = new TestAcceptor(createAcceptorSettings("single-session/client.keystore", false,
-                "single-session/empty.keystore", "TLS_RSA_WITH_AES_128_CBC_SHA", "TLSv1.2", "JKS", "JKS"));
+                "single-session/empty.keystore", CIPHER_SUITES_TLS, "TLSv1.2", "JKS", "JKS"));
 
         try {
             acceptor.start();
 
             TestInitiator initiator = new TestInitiator(
                     createInitiatorSettings("single-session/empty.keystore", "single-session/client.truststore",
-                            "TLS_RSA_WITH_AES_128_CBC_SHA", "TLSv1.2", "ZULU", "ALFA", "12340", "JKS", "JKS"));
+                            CIPHER_SUITES_TLS, "TLSv1.2", "ZULU", "ALFA", "12340", "JKS", "JKS"));
 
             try {
                 initiator.start();
@@ -520,20 +522,15 @@ public class SSLCertificateTest {
 
         private SessionConnector prepareConnector(SessionSettings sessionSettings) throws ConfigError {
             SessionConnector sessionConnector = createConnector(sessionSettings);
-            sessionConnector.setIoFilterChainBuilder(new IoFilterChainBuilder() {
+            sessionConnector.setIoFilterChainBuilder(chain -> chain.addLast("SSL exception handler", new IoFilterAdapter() {
                 @Override
-                public void buildFilterChain(IoFilterChain chain) throws Exception {
-                    chain.addLast("SSL exception handler", new IoFilterAdapter() {
-                        @Override
-                        public void exceptionCaught(NextFilter nextFilter, IoSession session, Throwable cause)
-                                throws Exception {
-                            LOGGER.info("SSL exception", cause);
-                            exceptionThrownLatch.countDown();
-                            nextFilter.exceptionCaught(session, cause);
-                        }
-                    });
+                public void exceptionCaught(NextFilter nextFilter, IoSession session, Throwable cause)
+                        throws Exception {
+                    LOGGER.info("SSL exception", cause);
+                    exceptionThrownLatch.countDown();
+                    nextFilter.exceptionCaught(session, cause);
                 }
-            });
+            }));
 
             return sessionConnector;
         }
@@ -692,7 +689,7 @@ public class SSLCertificateTest {
 
     private SessionSettings createMultiSessionAcceptorSettings(String keyStoreName, boolean needClientAuth,
             String[] trustStoreNames, String cipherSuites, String protocols) {
-        HashMap<Object, Object> defaults = new HashMap<Object, Object>();
+        HashMap<Object, Object> defaults = new HashMap<>();
         defaults.put("ConnectionType", "acceptor");
         defaults.put("SocketConnectProtocol", ProtocolFactory.getTypeString(ProtocolFactory.SOCKET));
         defaults.put(SSLSupport.SETTING_USE_SSL, "Y");
@@ -733,7 +730,7 @@ public class SSLCertificateTest {
 
     private SessionSettings createAcceptorSettings(String keyStoreName, boolean needClientAuth, String trustStoreName,
             String cipherSuites, String protocols, String keyStoreType, String trustStoreType) {
-        HashMap<Object, Object> defaults = new HashMap<Object, Object>();
+        HashMap<Object, Object> defaults = new HashMap<>();
         defaults.put("ConnectionType", "acceptor");
         defaults.put("SocketConnectProtocol", ProtocolFactory.getTypeString(ProtocolFactory.SOCKET));
         defaults.put(SSLSupport.SETTING_USE_SSL, "Y");
@@ -784,7 +781,7 @@ public class SSLCertificateTest {
     private SessionSettings createInitiatorSettings(String keyStoreName, String trustStoreName, String cipherSuites,
             String protocols, String senderId, String targetId, String port, String keyStoreType,
             String trustStoreType) {
-        HashMap<Object, Object> defaults = new HashMap<Object, Object>();
+        HashMap<Object, Object> defaults = new HashMap<>();
         defaults.put("ConnectionType", "initiator");
         defaults.put("SocketConnectProtocol", ProtocolFactory.getTypeString(ProtocolFactory.SOCKET));
         defaults.put(SSLSupport.SETTING_USE_SSL, "Y");

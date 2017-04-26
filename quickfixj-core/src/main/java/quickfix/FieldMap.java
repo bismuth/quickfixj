@@ -19,17 +19,6 @@
 
 package quickfix;
 
-import java.io.Serializable;
-import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.Date;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.TreeMap;
-
 import quickfix.field.BeginString;
 import quickfix.field.BodyLength;
 import quickfix.field.CheckSum;
@@ -43,6 +32,17 @@ import quickfix.field.converter.UtcDateOnlyConverter;
 import quickfix.field.converter.UtcTimeOnlyConverter;
 import quickfix.field.converter.UtcTimestampConverter;
 
+import java.io.Serializable;
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.TreeMap;
+
 /**
  * Field container used by messages, groups, and composites.
  */
@@ -54,18 +54,29 @@ public abstract class FieldMap implements Serializable {
 
     private final TreeMap<Integer, Field<?>> fields;
 
-    private final TreeMap<Integer, List<Group>> groups = new TreeMap<Integer, List<Group>>();
+    private final TreeMap<Integer, List<Group>> groups = new TreeMap<>();
 
+    /**
+     * Constructs a FieldMap with the given field order.
+     * The given array must not be modified.
+     *
+     * @param fieldOrder the field order, or null if there is none
+     */
     protected FieldMap(int[] fieldOrder) {
         this.fieldOrder = fieldOrder;
-        fields = new TreeMap<Integer, Field<?>>(
-                fieldOrder != null ? new FieldOrderComparator() : null);
+        fields = new TreeMap<>(fieldOrder != null ? new FieldOrderComparator() : null);
     }
 
     protected FieldMap() {
         this(null);
     }
 
+    /**
+     * Returns the order of fields in the group.
+     * The returned array must not be modified.
+     *
+     * @return the field order
+     */
     public int[] getFieldOrder() {
         return fieldOrder;
     }
@@ -400,7 +411,7 @@ public abstract class FieldMap implements Serializable {
         fields.clear();
         fields.putAll(source.fields);
         for (Entry<Integer, List<Group>> entry : source.groups.entrySet()) {
-            final List<Group> clones = new ArrayList<Group>();
+            final List<Group> clones = new ArrayList<>();
             for (final Group group : entry.getValue()) {
                 final Group clone = new Group(group.getFieldTag(),
                         group.delim(), group.getFieldOrder());
@@ -560,7 +571,7 @@ public abstract class FieldMap implements Serializable {
     public List<Group> getGroups(int field) {
         List<Group> groupList = groups.get(field);
         if (groupList == null) {
-            groupList = new ArrayList<Group>();
+            groupList = new ArrayList<>();
             groups.put(field, groupList);
         }
         return groupList;

@@ -19,17 +19,21 @@
 
 package quickfix;
 
+import org.junit.Test;
+import org.quickfixj.CharsetSupport;
+import quickfix.field.MDUpdateAction;
+import quickfix.field.RawData;
+import quickfix.field.Side;
+import quickfix.field.TradeCondition;
+import quickfix.fix50.MarketDataIncrementalRefresh;
+
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.Date;
 
-import static junit.framework.Assert.assertTrue;
 import static junit.framework.Assert.assertEquals;
-import org.junit.Test;
-import org.quickfixj.CharsetSupport;
-import quickfix.field.RawData;
-import quickfix.field.Side;
+import static junit.framework.Assert.assertTrue;
 
 public class FieldTest {
 
@@ -45,7 +49,7 @@ public class FieldTest {
     }
 
     private void testFieldCalcuations(String value, int checksum, int length) {
-        Field<String> field = new Field<String>(12, value);
+        Field<String> field = new Field<>(12, value);
         field.setObject(value);
         assertEquals("12=" + value, field.toString());
         assertEquals(checksum, field.getChecksum());
@@ -161,7 +165,7 @@ public class FieldTest {
         assertEquals(33, field.getTag());
         assertEquals(45.6, field.getValue(), 0);
     }
-    
+
     @Test(expected = NumberFormatException.class)
     public void testDoubleFieldException() {
         DoubleField field = new DoubleField(11, Double.NaN);
@@ -248,6 +252,23 @@ public class FieldTest {
         assertEqualsAndHash(new UtcDateOnlyField(11, date), new UtcDateOnlyField(11, date));
         assertEqualsAndHash(new UtcTimeOnlyField(11, date), new UtcTimeOnlyField(11, date));
         assertEqualsAndHash(new UtcTimeStampField(11, date), new UtcTimeStampField(11, date));
+    }
+
+    // QFJ-881
+    @Test
+    public void testMultipleStringValue() throws Exception {
+
+        assertEquals(FieldType.MULTIPLESTRINGVALUE, FieldType.fromName("notused", "MULTIPLESTRINGVALUE"));
+        assertEquals(FieldType.MULTIPLEVALUESTRING, FieldType.fromName("notused", "MULTIPLEVALUESTRING"));
+
+        MarketDataIncrementalRefresh md = new MarketDataIncrementalRefresh();
+        MarketDataIncrementalRefresh.NoMDEntries value = new MarketDataIncrementalRefresh.NoMDEntries();
+        value.set(new MDUpdateAction(MDUpdateAction.NEW));
+        value.set(new TradeCondition("A B"));
+        md.addGroup(value);
+
+        DataDictionary dd = new DataDictionary("FIX50.xml");
+        dd.validate(md);
     }
 
     private void assertEqualsAndHash(Field<?> field1, Field<?> field2) {

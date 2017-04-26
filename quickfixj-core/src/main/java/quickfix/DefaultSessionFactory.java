@@ -19,26 +19,34 @@
 
 package quickfix;
 
-import java.net.InetAddress;
-import java.util.Enumeration;
-import java.util.Hashtable;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
-
+import org.quickfixj.QFJException;
+import org.quickfixj.SimpleCache;
 import quickfix.field.ApplVerID;
 import quickfix.field.DefaultApplVerID;
+
+import java.net.InetAddress;
+import java.util.Enumeration;
+import java.util.Properties;
+import java.util.Set;
 
 /**
  * Factory for creating sessions. Used by the communications code (acceptors,
  * initiators) for creating sessions.
  */
 public class DefaultSessionFactory implements SessionFactory {
-    private static final Map<String, DataDictionary> dictionaryCache = new Hashtable<String, DataDictionary>();
+    private static final SimpleCache<String, DataDictionary> dictionaryCache = new SimpleCache<>(path -> {
+        try {
+            return new DataDictionary(path);
+        } catch (ConfigError e) {
+            throw new QFJException(e);
+        }
+    });
+
     private final Application application;
     private final MessageStoreFactory messageStoreFactory;
     private final LogFactory logFactory;
     private final MessageFactory messageFactory;
+    private final SessionScheduleFactory sessionScheduleFactory;
 
     public DefaultSessionFactory(Application application, MessageStoreFactory messageStoreFactory,
             LogFactory logFactory) {
@@ -46,6 +54,7 @@ public class DefaultSessionFactory implements SessionFactory {
         this.messageStoreFactory = messageStoreFactory;
         this.logFactory = logFactory;
         this.messageFactory = new DefaultMessageFactory();
+        this.sessionScheduleFactory = new DefaultSessionScheduleFactory();
     }
 
     public DefaultSessionFactory(Application application, MessageStoreFactory messageStoreFactory,
@@ -54,6 +63,17 @@ public class DefaultSessionFactory implements SessionFactory {
         this.messageStoreFactory = messageStoreFactory;
         this.logFactory = logFactory;
         this.messageFactory = messageFactory;
+        this.sessionScheduleFactory = new DefaultSessionScheduleFactory();
+    }
+
+    public DefaultSessionFactory(Application application, MessageStoreFactory messageStoreFactory,
+                                 LogFactory logFactory, MessageFactory messageFactory,
+                                 SessionScheduleFactory sessionScheduleFactory) {
+        this.application = application;
+        this.messageStoreFactory = messageStoreFactory;
+        this.logFactory = logFactory;
+        this.messageFactory = messageFactory;
+        this.sessionScheduleFactory = sessionScheduleFactory;
     }
 
     public Session create(SessionID sessionID, SessionSettings settings) throws ConfigError {
@@ -180,8 +200,10 @@ public class DefaultSessionFactory implements SessionFactory {
             final int[] logonIntervals = getLogonIntervalsInSeconds(settings, sessionID);
             final Set<InetAddress> allowedRemoteAddresses = getInetAddresses(settings, sessionID);
 
+            final SessionSchedule sessionSchedule = sessionScheduleFactory.create(sessionID, settings);
+
             final Session session = new Session(application, messageStoreFactory, sessionID,
-                    dataDictionaryProvider, new SessionSchedule(settings, sessionID), logFactory,
+                    dataDictionaryProvider, sessionSchedule, logFactory,
                     messageFactory, heartbeatInterval, checkLatency, maxLatency, millisInTimestamp,
                     resetOnLogon, resetOnLogout, resetOnDisconnect, refreshAtLogon, checkCompID,
                     redundantResentRequestAllowed, persistMessages, useClosedIntervalForResend,
@@ -234,11 +256,6 @@ public class DefaultSessionFactory implements SessionFactory {
         if (settings.isSetting(sessionID, Session.SETTING_VALIDATE_FIELDS_HAVE_VALUES)) {
             dataDictionary.setCheckFieldsHaveValues(settings.getBool(sessionID,
                     Session.SETTING_VALIDATE_FIELDS_HAVE_VALUES));
-        }
-
-        if (settings.isSetting(sessionID, Session.SETTING_VALIDATE_UNORDERED_GROUP_FIELDS)) {
-            dataDictionary.setCheckUnorderedGroupFields(settings.getBool(sessionID,
-                    Session.SETTING_VALIDATE_UNORDERED_GROUP_FIELDS));
         }
 
         if (settings.isSetting(sessionID, Session.SETTING_VALIDATE_UNORDERED_GROUP_FIELDS)) {
@@ -325,13 +342,14 @@ public class DefaultSessionFactory implements SessionFactory {
     }
 
     private DataDictionary getDataDictionary(String path) throws ConfigError {
-        synchronized (dictionaryCache) {
-            DataDictionary dataDictionary = dictionaryCache.get(path);
-            if (dataDictionary == null) {
-                dataDictionary = new DataDictionary(path);
-                dictionaryCache.put(path, dataDictionary);
+        try {
+            return dictionaryCache.computeIfAbsent(path);
+        } catch (QFJException e) {
+            final Throwable cause = e.getCause();
+            if (cause instanceof ConfigError) {
+                throw (ConfigError) cause;
             }
-            return dataDictionary;
+            throw e;
         }
     }
 
